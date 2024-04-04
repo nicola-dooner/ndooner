@@ -1,0 +1,239 @@
+---
+title: "Tiny Beginnings, Big Impact"
+subtitle: "Exploring Low Birth Weight, Life Expectancy, and Diarrohea Treatment using UNICEF Data"
+author: "Nicola Dooner"
+date: "2024-04-04"
+format:
+  html:
+    theme: cerulean
+    backgroundcolor: lightblue
+    toc: true
+  
+execute: 
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# libraries
+library(tidyverse)
+library(plotly)
+
+# data
+
+unicef_indicator_1 <- read_csv("unicef_indicator_1.csv")
+unicef_indicator_2 <- read_csv("unicef_indicator_2.csv")
+unicef_metadata_1_ <- read_csv("unicef_metadata.csv")
+data_right_3 <- read_csv("data_right_3.csv")
+
+# transformations
+
+data_join <- full_join(unicef_indicator_1, unicef_indicator_2, by = join_by(country, year))
+data_join <- full_join(unicef_indicator_1, unicef_metadata_1_, by = join_by(country, year))
+data_join <- full_join(unicef_indicator_1, data_right_3)
+
+data_join <- unicef_indicator_1 %>%
+  full_join(unicef_indicator_2) %>%
+  full_join(unicef_metadata_1_) %>%
+  full_join(data_right_3)
+
+
+```
+
+# Introduction
+
+**Visualisations** have the power to paint a *vivid* picture. The aim of this dashboard is to paint a picture of the global state of the health of our children. The dashboard will focus on the core areas of 
+
+- low birth weight in new borns,
+- life expectancy at birth
+
+offering *valuable* insights into the challenges and successes in child health worldwide. 
+
+![](images.png)
+
+The dashboard begins by analsying the prevalence of low birth weight in ***countries*** in **2005** and **2020** on a ***map visualisation***. It proceeds to analyse the same data in a ***time series analysis***. Next, the relationships between life expectancy and low birth weight are compared using a ***scatterplot***. The final visualisation is a ***bar chart*** displaying average life expectancy at birth per continent. 
+
+This **dashboard** provides a journey of discovery by *uncovering trends*, *identifying disparities*, and *striving to answer pressing questions* about the health and vitality of our children. Analsying the following visualisations provides ***power*** to drive *informed decisions* and *meaningful change* for the future of our youth.
+
+
+## Maps
+
+```{r}
+
+map_world <- map_data("world")
+
+# Map 2005
+
+data_join %>%
+  filter(year == 2005) %>%
+  full_join(map_world, by = c("country" = "region")) %>%
+  ggplot(aes( x = long, y = lat, group = group, fill = obs_value))+
+  geom_polygon() +
+  scale_fill_gradient(low = "yellow", high = "red") +
+  labs(title = "Low Birth Weight % by Country in 2005",
+  fill = "%") + 
+  theme(
+    text = element_text(family = "calibri")
+  )
+
+```
+
+
+The **Map Visualisations** displays the *Percentage* of **Babies Born Underweight** in each country for the years
+
+- 2005
+- 2020
+
+Evidently, ***India*** is the country with the lowest birth weight percentage in **2005**, surpassing the other countries by a significant amount. The second map visualisation shows the percentage of babies born underweight in **2020**. While the low-birth-weight rates have only changed slightly over the 15-year period, they appear to have changed *in unison* across the countries, showing a slight decrease globally. 
+
+For example, low birth weight percentages in ***Australia*** have decreased from *6.33%* in **2005** to *6.55%* in 2020. Similarly, the percentage for ***India***, the country most affected, has also decreased from *30.52%* in **2005** to *27.44%* in **2020**. 
+
+However, the decreases are so slight that they are not ***clearly visible*** on the map visualisation. It must also be noted that ***Covid-19*** took place in **2020**, which may have impacted on the figures given normal circumstances.
+
+
+```{r}
+
+# Map 2020
+
+data_join %>%
+  filter(year == 2020) %>%
+  full_join(map_world, by = c("country" = "region")) %>%
+  ggplot(aes( x = long, y = lat, group = group, fill = obs_value))+
+  geom_polygon() +
+  scale_fill_gradient(low = "yellow", high = "red") +
+  labs(title = "Low Birth Weight % by Country in 2020",
+       fill = "%") +
+  theme(
+    text = element_text(family = "calibri")
+  )
+
+```
+
+
+
+## Time Series
+
+```{r}
+# time series
+
+install.packages("plotly")
+
+library(plotly)
+
+timeseries_plot_1 <- data_join %>%
+  filter(year >= 2000 & year <= 2022) %>%
+  ggplot() +
+  aes(year, obs_value, group = country, color = continent) +
+  geom_line() +
+  labs(x = "Year",
+       y = "Low Birth Weight %",
+       title = "Low Birth Weight % per Continent") +
+  theme(text = element_text(family = "Calibri")) 
+
+ggplotly(timeseries_plot_1) %>%
+  layout(plot_bgcolor = "rgba(0,0,0,0)",
+         paper_bgcolor = "rgba(0,0,0,0)")
+
+```
+
+
+The above visualisation is presenting the *same data*, ***prevalence of low birth rate per country***, but in a **Time Series** format. This allows a *clearer trend* in the data to be established. By *hovering* over the lines in the time series, the 
+
+- Country, 
+- Continent,
+- Low birth weight percentage (labelled 'Obs_value') and
+- The relevant year 
+
+is displayed. 
+
+<img src="lowbirthweight.jpg" alt="lowbirthweight" width="300" height="200">
+
+
+By separating the data by **continent**, a more meaningful picture can be painted with the data. It is clear from the visualisation that **Asia** and **Africa** experience the *highest percentages* of low birth weight, with **India** once again clearly presenting as the most impacted country overall. 
+
+**Europe** and the **Americas** experience a *lower prevalence* of babies being born underweight, while **Oceania** lies somewhere in the *middle*. It is also clear that there is ***less data*** presented for **Oceania**. This is because this data is *absent* from the *data source*. The inclusion of the missing data may provide a more *well-rounded* picture of the prevalence of underweight babies in Oceania and allow for a more *accurate* comparison with the other continents.
+
+
+## Scatterplot
+
+```{r}
+
+# scatter plot
+
+scatter_plot <- ggplot(data_join) +
+  aes(obs_value, Life_exp_at_birth, color = continent, size = obs_value) +
+  geom_point(alpha = 0.5) +
+  labs(x = "Low Birth Weight %",
+       y = "Life Expectancy at Birth",
+       title = "Relationship between Low Birth Weight and Life Expectancy at Birth", color = "continent") +
+  theme(text = element_text(family = "Calibri"))
+
+hover_info <- paste("Country: ", data_join$country, "<br>",
+                    "Observation Value: ", data_join$obs_value, "<br>",
+                    "Life Expectancy at Birth: ", data_join$Life_exp_at_birth)
+
+ggplotly(scatter_plot)
+```
+
+
+The above **Scatterplot** displays key trends linking the *prevalence* of ***Low Birth Weight*** to **Life expectancy at birth** overtime. The *trend* of this visualisation suggests that *continents* with a higher life expectancy at birth tend to have a lower percentage of babies born underweight. It also suggests that as life expectancy at birth **decreases**, the *low-birth-weight* percentage for that country **increases**. By hovering across the *data points* on the scatter plot the following information is displayed for each data point:
+
+- Life Expectancy at Birth,
+- Low Birth Weight % (labelled 'Obs_value'), and 
+- Continent.
+
+
+## Bar Chart
+
+```{r}
+
+# Bar chart
+
+data_join %>%
+  group_by(continent, year) %>%
+  summarise(m_life_exp_at_birth = mean(Life_exp_at_birth, na.rm = TRUE)) %>%
+  filter(year == 2008) %>%
+  ggplot() +
+  aes(continent, m_life_exp_at_birth, fill = continent) +
+  geom_col() +
+  labs(x = "Life Expectancy at Birth",
+       y = "Continent",
+       title = "Average Life Expectancy at Birth per Continent in 2008") +
+  theme_classic() +
+  theme(
+    text = element_text(family = "cailibri"), 
+    axis.text.x = element_blank()
+  ) +
+  scale_fill_manual(values = c("green", "red", "blue", "yellow","purple","grey"))
+
+```
+
+
+The above **Bar Chart** displays the ***average life expectancy at birth*** per ***continent*** in **2008** While there is a *null* bar due to *gaps in the data*, clear ***trends*** can be established between the various ***continents*** displayed. The continents ranked from *highest* to *lowest* in terms of life expectancy at birth is as follows:
+
+1. Eurpoe
+2. The Americas
+3. Asia
+4. Oceania
+5. Africa
+
+As a clear *ranking* can be established between the **continents**, work can be done to ensure **countries** in ***Africa*** receive the *resources* and *facilities* they need to combat the **low** life expectancy they are experiencing.  
+
+
+# Conclusion
+
+Through the *lens* of *data*, we've gained ***valuable insights*** into the challenges faced by young populations *worldwide*, from **low birth weight** to access to vital treatments for common childhood illnesses. 
+
+The dashboard presented many findings, *for example*, 
+
+- **Africa** is the continent that suffers the most from low birth weight in new borns, 
+- **India** is being the single most impacted country. 
+
+*Average* life expectancy can be correlated with both low birth weight to provide *interesting insights*. By examining more closely ***individual continents***, more specific trends could be examined. However, this posed difficulties due to **gaps in the data** causing a *lack of consistency* in the findings. Most importantly, the dashboard allowed for the critical importance of ***investing in the well-being of our children*** to be uncovered. Going forward, this knowledge can be used to drive *positive change*, ensuring every child has the opportunity to *thrive* and reach their *full potential*.
+
+![](images.png)
+
